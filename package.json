@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@10.29.2",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -13,7 +17,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@arcium-hq/client": "^0.8.0",
+    "@arcium-hq/client": "0.8.4",
     "@coral-xyz/anchor": "^0.32.1",
     "@hookform/resolvers": "^3.10.0",
     "@noble/curves": "^1.9.7",
@@ -71,6 +75,12 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
     "zod": "^3.25.76"
+  },
+  "pnpm": {
+    "overrides": {
+      "@arcium-hq/client>@noble/curves": "1.9.7",
+      "@arcium-hq/client>@noble/hashes": "1.8.0"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
