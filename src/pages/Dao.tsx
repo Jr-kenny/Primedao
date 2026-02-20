@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { Share2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Poll } from "@/types/poll";
 import { usePolls } from "@/hooks/usePolls";
@@ -15,6 +17,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 
 const Dao = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { connected } = useWallet();
   const { polls, isCreating, createPoll, getTimeRemaining, refreshPolls } = usePolls();
   const { submitVote, isVoting, isCheckingVoteStatus, hasVoted, refreshVoteStatus } =
@@ -27,6 +30,20 @@ const Dao = () => {
     const updated = polls.find((poll) => poll.id === selectedPoll.id);
     if (updated) setSelectedPoll(updated);
   }, [polls, selectedPoll]);
+
+  useEffect(() => {
+    const sharedPoolId = searchParams.get("poolId");
+    if (!sharedPoolId || selectedPoll) return;
+    const sharedPoll = polls.find((poll) => poll.id === sharedPoolId);
+    if (sharedPoll) setSelectedPoll(sharedPoll);
+  }, [polls, searchParams, selectedPoll]);
+
+  useEffect(() => {
+    if (!selectedPoll) return;
+    const next = new URLSearchParams(searchParams);
+    next.set("poolId", selectedPoll.id);
+    setSearchParams(next, { replace: true });
+  }, [selectedPoll, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!selectedPoll || !connected) return;
@@ -47,6 +64,18 @@ const Dao = () => {
     .filter((poll) => poll.status === "active")
     .reduce((sum, poll) => sum + Object.values(poll.votes).reduce((a, b) => a + b, 0), 0);
   const totalVotesToDisplay = selectedPoll ? selectedPollVotes : activePollVotes;
+
+  const handleShareSelectedPool = async () => {
+    if (!selectedPoll) return;
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set("poolId", selectedPoll.id);
+    try {
+      await navigator.clipboard.writeText(shareUrl.toString());
+      toast.success(`Pool ${selectedPoll.id} link copied`);
+    } catch {
+      toast.error("Could not copy share link");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -95,9 +124,11 @@ const Dao = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground text-sm">
-                    Active Polls:
+                    {selectedPoll ? "Pool ID:" : "Active Polls:"}
                   </span>
-                  <span className="font-mono font-semibold">{polls.length}</span>
+                  <span className="font-mono font-semibold">
+                    {selectedPoll ? selectedPoll.id : polls.length}
+                  </span>
                 </div>
                 {selectedPoll && (
                   <div className="flex justify-between items-center">
@@ -118,6 +149,15 @@ const Dao = () => {
                       {getTimeRemaining(selectedPoll.endsAt)}
                     </span>
                   </div>
+                )}
+                {selectedPoll && (
+                  <button
+                    onClick={handleShareSelectedPool}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-mono hover:bg-muted/40 transition-colors"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    Share Selected Pool
+                  </button>
                 )}
               </div>
             </div>
