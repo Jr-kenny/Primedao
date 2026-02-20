@@ -135,6 +135,14 @@ const Landing = () => {
           <span className="font-mono text-xs text-muted-foreground">
             PrimeDAO © 2026
           </span>
+          <a
+            href="https://x.com/Jrken_ny"
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+          >
+            Made by @Jrken_ny
+          </a>
           <span className="font-mono text-xs text-muted-foreground">
             Built on Arcium
           </span>

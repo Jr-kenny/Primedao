@@ -148,6 +148,18 @@ const Dao = () => {
         <div className="glass-card rounded-2xl p-6">
           <TechnicalSection />
         </div>
+
+        <footer className="py-6 text-center text-xs text-muted-foreground">
+          Made by{" "}
+          <a
+            href="https://x.com/Jrken_ny"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-4 hover:text-foreground transition-colors"
+          >
+            @Jrken_ny
+          </a>
+        </footer>
       </div>
     </div>
   );

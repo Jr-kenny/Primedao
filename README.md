@@ -4,6 +4,8 @@ PrimeDAO is a voting app for communities that need two things at the same time:
 - fast, transparent vote totals
 - private individual choices
 
+Made by [@Jrken_ny](https://x.com/Jrken_ny).
+
 Most governance tools force a tradeoff: either everyone sees wallets and voting behavior, or results are delayed. PrimeDAO uses Arcium to remove that tradeoff.
 
 ## What We Built
