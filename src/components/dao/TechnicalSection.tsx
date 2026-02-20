@@ -17,9 +17,10 @@ const ARCIUM_COMPONENTS = [
     responsibility: "Encrypts vote data before submission",
   },
   {
-    component: "Solana PDA",
-    description: "Program Derived Account",
-    responsibility: "Stores encrypted vote tallies on-chain",
+    component: "Solana Accounts",
+    description: "Program state + PDAs",
+    responsibility:
+      "Stores proposal and computation state used by the voting program",
   },
 ];
 
@@ -87,11 +88,12 @@ export const TechnicalSection = () => {
             <Lock className="h-5 w-5 text-accent mt-0.5" />
             <div>
               <p className="font-display font-semibold text-sm mb-1">
-                Address Anonymity
+                Address Visibility
               </p>
               <p className="text-sm text-muted-foreground">
-                Using MPC relayers, your wallet address is never linked to your
-                vote on the public ledger.
+                Your wallet still signs the transaction on Solana, but your
+                vote choice is encrypted before submission and is not exposed in
+                plaintext.
               </p>
             </div>
           </div>
@@ -103,8 +105,9 @@ export const TechnicalSection = () => {
                 Verifiable Results
               </p>
               <p className="text-sm text-muted-foreground">
-                Final tallies are cryptographically proven correct without
-                revealing individual votes.
+                Computation outputs can be verified through Arcium's
+                verification flow (for example, cluster-signed results) before
+                they are applied on-chain.
               </p>
             </div>
           </div>

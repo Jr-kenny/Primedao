@@ -9,17 +9,20 @@ const features = [
   {
     icon: Lock,
     title: "Encrypted Votes",
-    description: "Your vote is encrypted using Arcium's MPC network before it ever touches the chain.",
+    description:
+      "Your vote is encrypted locally via Arcium's MPC flow before it is submitted on-chain.",
   },
   {
     icon: EyeOff,
-    title: "Zero Knowledge",
-    description: "Nobody — not even validators — can see individual votes during the polling period.",
+    title: "MPC Privacy",
+    description:
+      "Arcium MPC nodes compute on protected inputs, so individual vote choices are not exposed in plaintext during polling.",
   },
   {
     icon: Shield,
     title: "Verifiable Results",
-    description: "Final tallies are computed on encrypted data and verified on-chain with proof of integrity.",
+    description:
+      "Final results come from encrypted computation outputs that can be checked through Arcium's verification flow (e.g., cluster signatures).",
   },
 ];
 
