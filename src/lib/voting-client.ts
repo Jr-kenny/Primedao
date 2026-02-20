@@ -8,9 +8,10 @@ import {
 import { x25519 } from "@noble/curves/ed25519";
 import {
   getArciumProgramId,
+  getClockAccAddress,
+  getFeePoolAccAddress,
   getMXEAccAddress,
   getMXEPublicKey,
-  getCompDefAccOffset,
   RescueCipher,
 } from "@arcium-hq/client";
 import { ARCIUM_CONFIG } from "./arcium-config";
@@ -60,15 +61,26 @@ function toX25519Key(value: unknown): Uint8Array | null {
   return bytes;
 }
 
+function ensureCiphertext32(values: number[], label: string): number[] {
+  if (values.length !== 32) {
+    throw new Error(`Invalid ${label} length: expected 32, got ${values.length}`);
+  }
+  return values;
+}
+
 async function getMXEPublicKeyWithRetry(
   provider: AnchorProvider,
   mxeProgramId: PublicKey,
-  attempts = 8,
-  delayMs = 1200
+  attempts = 10,
+  delayMs = 1000
 ): Promise<Uint8Array | null> {
   for (let i = 0; i < attempts; i++) {
-    const key = await getMXEPublicKey(provider, mxeProgramId);
-    if (key && key.length === 32) return key;
+    try {
+      const key = await getMXEPublicKey(provider, mxeProgramId);
+      if (key && key.length === 32) return key;
+    } catch {
+      // Retry on transient/missing-account SDK lookup failures.
+    }
     if (i < attempts - 1) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
@@ -117,6 +129,25 @@ function toU32Seed(value: number): Buffer {
   const buf = Buffer.alloc(4);
   buf.writeUInt32LE(value, 0);
   return buf;
+}
+
+function generateComputationOffset(): number {
+  // Avoid PDA collisions by combining millisecond time with a random suffix.
+  return Date.now() * 1000 + Math.floor(Math.random() * 1000);
+}
+
+async function getCompDefOffsetFromCircuitName(
+  circuitName: string
+): Promise<number> {
+  const encodedName = new TextEncoder().encode(circuitName);
+  const digest = await crypto.subtle.digest("SHA-256", encodedName);
+  const offsetBytes = new Uint8Array(digest).slice(0, 4);
+  const view = new DataView(
+    offsetBytes.buffer,
+    offsetBytes.byteOffset,
+    offsetBytes.byteLength
+  );
+  return view.getUint32(0, true);
 }
 
 export interface ProposalView {
@@ -306,9 +337,10 @@ export class VotingClient {
     }
 
     let mxeProgramId: PublicKey =
-      ARCIUM_CONFIG.arcium.mxeProgramId ??
       mxeAccountData.mxeProgramId ??
-      mxeAccountData.mxe_program_id;
+      mxeAccountData.mxe_program_id ??
+      ARCIUM_CONFIG.programId ??
+      ARCIUM_CONFIG.arcium.mxeProgramId;
     if (!mxeProgramId) {
       throw new Error("MXE account is missing mxeProgramId");
     }
@@ -330,9 +362,10 @@ export class VotingClient {
             mxeAccountData = canonicalData;
             mxePublicKey = canonicalKey;
             mxeProgramId =
-              ARCIUM_CONFIG.arcium.mxeProgramId ??
               mxeAccountData.mxeProgramId ??
-              mxeAccountData.mxe_program_id;
+              mxeAccountData.mxe_program_id ??
+              ARCIUM_CONFIG.programId ??
+              ARCIUM_CONFIG.arcium.mxeProgramId;
           }
         } catch {
           canonicalFetchError = `Derived MXE account ${canonicalMxeAccount.toBase58()} does not exist`;
@@ -374,12 +407,22 @@ export class VotingClient {
     const voterPartValues = [0, 8, 16, 24].map((offset) =>
       deserializeLE(voterBytes.slice(offset, offset + 8))
     );
-    const encryptedVoterParts = voterPartValues.map((partValue) =>
-      Array.from(cipher.encrypt([partValue], nonce)[0])
+    const encryptedVoterParts = voterPartValues.map((partValue, index) =>
+      ensureCiphertext32(
+        Array.from(cipher.encrypt([partValue], nonce)[0]),
+        `voter_part${index + 1}_enc`
+      )
+    );
+    const proposalIdEnc = ensureCiphertext32(
+      Array.from(cipher.encrypt([BigInt(input.proposalId)], nonce)[0]),
+      "proposal_id_enc"
+    );
+    const optionIndexEnc = ensureCiphertext32(
+      Array.from(cipher.encrypt([BigInt(input.optionIndex)], nonce)[0]),
+      "option_index_enc"
     );
 
-    const computationOffset =
-      input.computationOffset ?? Math.floor(Date.now() / 1000);
+    const computationOffset = input.computationOffset ?? generateComputationOffset();
     const computationOffsetBn = new BN(computationOffset);
 
     if (
@@ -421,9 +464,9 @@ export class VotingClient {
         computationOffsetBn.toArrayLike(Buffer, "le", 8),
       ]);
 
-    const compDefOffset = Buffer.from(
-      getCompDefAccOffset(compDefCircuitName)
-    ).readUInt32LE(0);
+    const compDefOffset = await getCompDefOffsetFromCircuitName(
+      compDefCircuitName
+    );
     const derivedCompDef =
       compDefAccount ??
       this.deriveArciumPda([
@@ -431,18 +474,35 @@ export class VotingClient {
         mxeProgramId.toBuffer(),
         toU32Seed(compDefOffset),
       ]);
+    const compDefInfo = await this.connection.getAccountInfo(derivedCompDef);
+    if (!compDefInfo) {
+      throw new Error(
+        `Computation definition account ${derivedCompDef.toBase58()} is not initialized. Run init_verify_vote_comp_def once with the deployer authority wallet, then retry voting.`
+      );
+    }
+
+    const arciumProgram = this.getArciumProgramKey();
+    const [signPdaAccount] = PublicKey.findProgramAddressSync(
+      [Buffer.from("ArciumSignerAccount")],
+      ARCIUM_CONFIG.programId
+    );
 
     const accounts: Record<string, PublicKey> = {
       proposal: proposalPda,
       payer: input.walletPublicKey,
       voter: input.walletPublicKey,
       voteRecord: voteRecordPda,
+      signPdaAccount,
       mxeAccount: mxeAccountToUse,
       mempoolAccount: derivedMempool,
       executingPool: derivedExecutingPool,
       computationAccount: derivedComputation,
       compDefAccount: derivedCompDef,
       clusterAccount: derivedCluster,
+      poolAccount: getFeePoolAccAddress(),
+      clockAccount: getClockAccAddress(),
+      systemProgram: SystemProgram.programId,
+      arciumProgram,
     };
 
     return program.methods
@@ -453,6 +513,8 @@ export class VotingClient {
         encryptedVoterParts[1],
         encryptedVoterParts[2],
         encryptedVoterParts[3],
+        proposalIdEnc,
+        optionIndexEnc,
         Array.from(publicKey),
         new BN(deserializeLE(nonce).toString())
       )
@@ -471,6 +533,13 @@ export class VotingClient {
         authority: program.provider.publicKey,
       })
       .rpc();
+  }
+
+  async hasVoted(proposalId: number, voter: PublicKey): Promise<boolean> {
+    const proposalPda = this.getProposalPda(proposalId);
+    const voteRecordPda = this.getVoteRecordPda(proposalPda, voter);
+    const voteRecordInfo = await this.connection.getAccountInfo(voteRecordPda);
+    return voteRecordInfo !== null;
   }
 
   async getPlatform() {

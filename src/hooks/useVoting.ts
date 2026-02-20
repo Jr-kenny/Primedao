@@ -24,7 +24,6 @@ export function useVoting() {
           proposalId,
           optionIndex,
           walletPublicKey: wallet.publicKey,
-          computationOffset: Math.floor(Date.now() / 1000),
         });
         toast.success("Vote cast privately!", {
           description: `TX: ${tx.slice(0, 16)}...`,

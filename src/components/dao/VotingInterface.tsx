@@ -7,6 +7,7 @@ import { Poll } from "@/types/poll";
 interface VotingInterfaceProps {
   poll: Poll | null;
   isVoting: boolean;
+  isCheckingVoteStatus: boolean;
   hasVoted: boolean;
   isWalletConnected: boolean;
   onVote: (optionIndex: number) => void;
@@ -15,6 +16,7 @@ interface VotingInterfaceProps {
 export const VotingInterface = ({
   poll,
   isVoting,
+  isCheckingVoteStatus,
   hasVoted,
   isWalletConnected,
   onVote,
@@ -49,36 +51,43 @@ export const VotingInterface = ({
         </p>
       )}
 
-      {/* Voting Options */}
-      <div className="flex flex-wrap justify-center gap-4">
-        {poll.options.map((option, index) => (
-          <motion.button
-            key={index}
-            onClick={() => !hasVoted && setSelectedOption(index)}
-            disabled={hasVoted || isVoting}
-            whileHover={!hasVoted ? { scale: 1.05 } : {}}
-            whileTap={!hasVoted ? { scale: 0.95 } : {}}
-            className="flex flex-col items-center gap-2"
-          >
-            <div
-              className={`h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                selectedOption === index
-                  ? "border-accent bg-accent"
-                  : "border-muted-foreground/40 hover:border-foreground/60"
-              } ${hasVoted ? "opacity-50 cursor-not-allowed" : ""}`}
+      {!hasVoted && (
+        <div className="flex flex-wrap justify-center gap-4">
+          {poll.options.map((option, index) => (
+            <motion.button
+              key={index}
+              onClick={() => !hasVoted && setSelectedOption(index)}
+              disabled={hasVoted || isVoting || isCheckingVoteStatus}
+              whileHover={!hasVoted ? { scale: 1.05 } : {}}
+              whileTap={!hasVoted ? { scale: 0.95 } : {}}
+              className="flex flex-col items-center gap-2"
             >
-              {selectedOption === index && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="h-3 w-3 rounded-full bg-accent-foreground"
-                />
-              )}
-            </div>
-            <span className="text-sm font-display">{option}</span>
-          </motion.button>
-        ))}
-      </div>
+              <div
+                className={`h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                  selectedOption === index
+                    ? "border-accent bg-accent"
+                    : "border-muted-foreground/40 hover:border-foreground/60"
+                } ${hasVoted ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {selectedOption === index && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="h-3 w-3 rounded-full bg-accent-foreground"
+                  />
+                )}
+              </div>
+              <span className="text-sm font-display">{option}</span>
+            </motion.button>
+          ))}
+        </div>
+      )}
+
+      {hasVoted && (
+        <div className="bg-muted/50 rounded-lg p-4 text-center text-sm text-muted-foreground">
+          Vote received. Your selected option is encrypted and remains private.
+        </div>
+      )}
 
       {/* Privacy Message */}
       <div className="bg-muted/50 rounded-lg p-3 text-center">
@@ -91,13 +100,19 @@ export const VotingInterface = ({
       {/* Submit Button */}
       <Button
         className="w-full gap-2 font-display font-semibold py-6 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground"
-        disabled={selectedOption === null || !isWalletConnected || isVoting || hasVoted}
+        disabled={
+          selectedOption === null ||
+          !isWalletConnected ||
+          isVoting ||
+          isCheckingVoteStatus ||
+          hasVoted
+        }
         onClick={handleSubmit}
       >
         {isVoting ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Encrypting Vote...
+            Encrypting on Arcium Network...
           </>
         ) : hasVoted ? (
           <>
@@ -107,21 +122,10 @@ export const VotingInterface = ({
         ) : (
           <>
             <Lock className="h-4 w-4" />
-            Private Submit
+            Submit
           </>
         )}
       </Button>
-
-      {isVoting && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex items-center justify-center gap-2 text-sm text-muted-foreground"
-        >
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Encrypting for Arcium Network...
-        </motion.div>
-      )}
 
       {!isWalletConnected && (
         <p className="text-center text-xs text-muted-foreground">

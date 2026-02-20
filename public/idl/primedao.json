@@ -1,5 +1,5 @@
 {
-  "address": "BNQXm38ecbMHG8fVNBPL9ZgmXyERpMJxFZkfD7cKE2Fm",
+  "address": "HUeej6v9dMg3JsJtRrTXPS7JKLABmWEz6e1V249cLryL",
   "metadata": {
     "name": "primedao",
     "version": "0.1.0",
@@ -191,6 +191,24 @@
         },
         {
           "name": "voter_part4_enc",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "proposal_id_enc",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "option_index_enc",
           "type": {
             "array": [
               "u8",

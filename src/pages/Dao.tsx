@@ -17,7 +17,8 @@ const Dao = () => {
   const navigate = useNavigate();
   const { connected } = useWallet();
   const { polls, isCreating, createPoll, getTimeRemaining, refreshPolls } = usePolls();
-  const { submitVote, isVoting, hasVoted } = useArciumVoting();
+  const { submitVote, isVoting, isCheckingVoteStatus, hasVoted, refreshVoteStatus } =
+    useArciumVoting();
 
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
 
@@ -27,6 +28,11 @@ const Dao = () => {
     if (updated) setSelectedPoll(updated);
   }, [polls, selectedPoll]);
 
+  useEffect(() => {
+    if (!selectedPoll || !connected) return;
+    void refreshVoteStatus(selectedPoll.id);
+  }, [selectedPoll, connected, refreshVoteStatus]);
+
   const handleVote = async (optionIndex: number) => {
     if (selectedPoll) {
       await submitVote(selectedPoll, optionIndex);
@@ -34,10 +40,13 @@ const Dao = () => {
     }
   };
 
-  const totalVotesAcrossPolls = polls.reduce(
-    (sum, poll) => sum + Object.values(poll.votes).reduce((a, b) => a + b, 0),
-    0
-  );
+  const selectedPollVotes = selectedPoll
+    ? Object.values(selectedPoll.votes).reduce((a, b) => a + b, 0)
+    : 0;
+  const activePollVotes = polls
+    .filter((poll) => poll.status === "active")
+    .reduce((sum, poll) => sum + Object.values(poll.votes).reduce((a, b) => a + b, 0), 0);
+  const totalVotesToDisplay = selectedPoll ? selectedPollVotes : activePollVotes;
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,14 +99,16 @@ const Dao = () => {
                   </span>
                   <span className="font-mono font-semibold">{polls.length}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground text-sm">
-                    Total Votes Cast:
-                  </span>
-                  <span className="font-mono font-semibold">
-                    {totalVotesAcrossPolls}
-                  </span>
-                </div>
+                {selectedPoll && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-sm">
+                      Selected Poll Votes:
+                    </span>
+                    <span className="font-mono font-semibold">
+                      {totalVotesToDisplay}
+                    </span>
+                  </div>
+                )}
                 {selectedPoll && (
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground text-sm">
@@ -109,9 +120,6 @@ const Dao = () => {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-4 font-mono">
-                *Individual votes encrypted via Arcium MPC*
-              </p>
             </div>
           </div>
 
@@ -120,6 +128,7 @@ const Dao = () => {
             <VotingInterface
               poll={selectedPoll}
               isVoting={isVoting}
+              isCheckingVoteStatus={isCheckingVoteStatus}
               hasVoted={selectedPoll ? hasVoted(selectedPoll.id) : false}
               isWalletConnected={connected}
               onVote={handleVote}
