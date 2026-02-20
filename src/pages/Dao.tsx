@@ -40,6 +40,7 @@ const Dao = () => {
 
   useEffect(() => {
     if (!selectedPoll) return;
+    if (searchParams.get("poolId") === selectedPoll.id) return;
     const next = new URLSearchParams(searchParams);
     next.set("poolId", selectedPoll.id);
     setSearchParams(next, { replace: true });
