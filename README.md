@@ -20,7 +20,7 @@ Core user flow:
 Current program integration in the frontend:
 - `initialize()`
 - `create_proposal(title, description, options, voting_period)`
-- `cast_vote(computation_offset, option_index, voter_part*_enc, pubkey, nonce)`
+- `cast_vote(computation_offset, option_index, voter_part1_enc, voter_part2_enc, voter_part3_enc, voter_part4_enc, proposal_id_enc, option_index_enc, pubkey, nonce)`
 - `close_proposal()`
 
 ## Why Arcium Matters Here
@@ -70,26 +70,30 @@ Key technical choices:
 - `src/pages/Dao.tsx`: main DAO UX
 - `public/idl/primedao.json`: PrimeDAO program IDL
 
+## Backend Repository
+
+The on-chain/backend code for PrimeDAO is maintained in:
+- https://github.com/Jr-kenny/primedaobackend
+
 ## Configuration
 
 Create `.env` in project root:
 
 ```bash
-VITE_PROGRAM_ID=BNQXm38ecbMHG8fVNBPL9ZgmXyERpMJxFZkfD7cKE2Fm
+VITE_PROGRAM_ID=HUeej6v9dMg3JsJtRrTXPS7JKLABmWEz6e1V249cLryL
 VITE_NETWORK=https://api.devnet.solana.com
 VITE_CLUSTER_OFFSET=456
 
-VITE_MXE_ACCOUNT=ExSHkJHLvxEiUP3qfhEhMq29h33zoTxH79uLAkAAaTPE
+VITE_MXE_ACCOUNT=9ZaQZqwY9jko2F13ZGQE6rNP3bAiGFr4t8LmYAKTGRey
 VITE_MEMPOOL_ACCOUNT=Ex7BD8o8PK1y2eXDd38Jgujj93uHygrZeWXDeGAHmHtN
 VITE_EXECUTING_POOL=4mcrgNZzJwwKrE3wXMHfepT8htSBmGqBzDYPJijWooog
 VITE_CLUSTER_ACCOUNT=DzaQCyfybroycrNqE5Gk7LhSbWD2qfCics6qptBFbr95
 
-# MXE program id (also accepts VITE_ARCIUM_PROGRAM_ID for backward compatibility)
-VITE_MXE_PROGRAM_ID=ARC1VVo9KxbizP36EGgsSd6B3VpLwE1eSgaGNZyhj1MN
+VITE_ARCIUM_PROGRAM_ID=ARC1VVo9KxbizP36EGgsSd6B3VpLwE1eSgaGNZyhj1MN
+VITE_COMP_DEF_ACCOUNT=2JqSXGWNVG8cip48uWUr77RXgTZ35L9tiqUb7vF89E6E
 ```
 
-Optional overrides (normally derived at runtime):
-- `VITE_COMP_DEF_ACCOUNT`
+Optional override (normally derived at runtime):
 - `VITE_COMPUTATION_ACCOUNT`
 
 ## Local Development
